@@ -1,0 +1,1196 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SQB · AI Трансформация · PMO</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --bg:       #f8f7f4;
+  --card:     #ffffff;
+  --border:   #e0dfd8;
+  --border2:  #ccccc4;
+  --sidebar:  #111827;
+  --txt:      #1a1f2e;
+  --txt2:     #64748b;
+  --txt3:     #94a3b8;
+  --txt-s:    #e2e8f0;
+  --txt-s2:   #6b7280;
+
+  --c-done:    #639922;
+  --c-active:  #378ADD;
+  --c-pending: #B5D4F4;
+  --c-overdue: #E24B4A;
+  --c-hold:    #888780;
+  --c-purple:  #7F77DD;
+  --c-amber:   #EF9F27;
+  --c-teal:    #1D9E75;
+
+  --r: 12px; --r2: 8px; --r3: 6px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:var(--txt);display:flex;height:100vh;overflow:hidden;font-size:13px;}
+::-webkit-scrollbar{width:5px;height:5px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+
+/* ── SIDEBAR ── */
+#sidebar{width:210px;flex-shrink:0;background:var(--sidebar);display:flex;flex-direction:column;overflow-y:auto;}
+.sb-logo{padding:22px 18px 18px;border-bottom:1px solid rgba(255,255,255,.07);}
+.sb-bank{font-size:10px;font-weight:700;color:var(--c-active);letter-spacing:2.5px;text-transform:uppercase;}
+.sb-name{font-size:14px;font-weight:700;color:var(--txt-s);margin-top:5px;line-height:1.35;}
+.sb-sub{font-size:10px;color:var(--txt-s2);margin-top:3px;}
+.sb-nav{padding:14px 10px 8px;}
+.sb-sect{font-size:9px;font-weight:700;color:rgba(255,255,255,.22);letter-spacing:1.5px;text-transform:uppercase;padding:0 8px 6px;margin-top:8px;}
+.sb-item{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:7px;cursor:pointer;color:var(--txt-s2);font-size:13px;font-weight:500;transition:all .15s;position:relative;}
+.sb-item:hover{background:rgba(255,255,255,.06);color:var(--txt-s);}
+.sb-item.active{background:rgba(55,138,221,.18);color:#6abaff;}
+.sb-item.active::before{content:'';position:absolute;left:0;top:20%;bottom:20%;width:3px;background:var(--c-active);border-radius:0 2px 2px 0;}
+.sb-icon{width:18px;text-align:center;font-size:15px;}
+.sb-foot{margin-top:auto;padding:14px 16px;border-top:1px solid rgba(255,255,255,.07);font-size:11px;color:rgba(255,255,255,.28);line-height:1.7;}
+.sb-foot strong{color:rgba(255,255,255,.48);}
+
+/* ── MAIN ── */
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+#topbar{display:flex;align-items:center;gap:12px;padding:0 24px;height:52px;background:var(--card);border-bottom:0.5px solid var(--border);flex-shrink:0;}
+.tb-title{font-size:14px;font-weight:600;color:var(--txt);}
+.tb-sep{color:var(--border2);}
+.tb-sub{font-size:13px;color:var(--txt2);}
+.tb-space{flex:1;}
+.tb-stamp{font-size:11px;color:var(--txt3);}
+#reload-btn{display:flex;align-items:center;gap:5px;padding:6px 13px;border-radius:var(--r2);background:var(--bg);border:0.5px solid var(--border);color:var(--txt2);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;font-family:inherit;}
+#reload-btn:hover{border-color:var(--c-active);color:var(--c-active);background:#fff;}
+#reload-btn.loading .spin{animation:spin .65s linear infinite;display:inline-block;}
+@keyframes spin{to{transform:rotate(360deg);}}
+#err-banner{display:none;background:#fff2f2;border-bottom:0.5px solid var(--c-overdue);color:var(--c-overdue);padding:10px 20px;font-size:12px;font-weight:500;text-align:center;}
+#err-banner.on{display:block;}
+
+/* ── CONTENT ── */
+#content{flex:1;overflow-y:auto;overflow-x:hidden;}
+.view{display:none;}
+.view.active{display:block;}
+
+/* ════ DASHBOARD ════ */
+#view-dashboard{padding:22px 24px;}
+
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
+.kpi-card{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);padding:18px 20px 16px;position:relative;overflow:hidden;}
+.kpi-card::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:var(--r) var(--r) 0 0;}
+.kpi-card.kpi-total::after{background:var(--txt3);}
+.kpi-card.kpi-done::after{background:var(--c-done);}
+.kpi-card.kpi-active::after{background:var(--c-active);}
+.kpi-card.kpi-over::after{background:var(--c-overdue);}
+.kpi-label{font-size:11px;font-weight:600;color:var(--txt3);text-transform:uppercase;letter-spacing:.05em;}
+.kpi-value{font-size:28px;font-weight:500;color:var(--txt);margin-top:8px;line-height:1;}
+.kpi-card.kpi-done  .kpi-value{color:var(--c-done);}
+.kpi-card.kpi-active.kpi-value{color:var(--c-active);}
+.kpi-card.kpi-over  .kpi-value{color:var(--c-overdue);}
+.kpi-sub{font-size:12px;color:var(--txt3);margin-top:5px;}
+
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+.row4{display:grid;grid-template-columns:5fr 4fr;gap:16px;margin-bottom:16px;}
+
+.panel{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:16px;}
+.panel-h{padding:14px 18px 10px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.panel-t{font-size:11px;font-weight:600;color:var(--txt2);text-transform:uppercase;letter-spacing:.05em;}
+.panel-b{padding:16px 18px;}
+.panel-b.np{padding:0;}
+
+.ch-wrap{position:relative;}
+.ch-wrap.h200{height:200px;}
+.ch-wrap.h220{height:220px;}
+.ch-wrap.h260{height:260px;}
+.ch-wrap.h140{height:140px;}
+.ch-wrap.h160{height:160px;}
+.ch-wrap.h240{height:240px;}
+.ch-wrap.h280{height:280px;}
+
+.donut-wrap{position:relative;display:flex;justify-content:center;}
+.dc{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;}
+.dc .big{font-size:22px;font-weight:600;color:var(--txt);}
+.dc .sm{font-size:10px;color:var(--txt3);margin-top:1px;}
+
+.legend{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:12px;}
+.li{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--txt2);}
+.ld{width:9px;height:9px;border-radius:2px;flex-shrink:0;}
+
+/* Progress panel */
+.ring-wrap{display:flex;align-items:center;gap:16px;padding:4px 0 14px;}
+.ring-text{text-align:center;}
+.ring-pct{font-size:24px;font-weight:600;color:var(--txt);}
+.ring-lbl{font-size:10px;color:var(--txt3);text-transform:uppercase;letter-spacing:.04em;margin-top:2px;}
+.mini-list{display:flex;flex-direction:column;gap:9px;}
+.mini-hdr{display:flex;justify-content:space-between;margin-bottom:3px;}
+.mini-name{font-size:11px;color:var(--txt2);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px;}
+.mini-pct{font-size:11px;font-weight:700;color:var(--txt);min-width:30px;text-align:right;}
+.mini-track{height:5px;background:var(--bg);border-radius:3px;overflow:hidden;}
+.mini-fill{height:100%;border-radius:3px;transition:width .6s ease;}
+
+.res-list{display:flex;flex-direction:column;gap:10px;overflow-y:auto;max-height:240px;}
+.res-row{display:flex;align-items:center;gap:10px;}
+.res-av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0;}
+.res-inf{flex:1;min-width:0;}
+.res-nm{font-size:12px;font-weight:500;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.res-bw{display:flex;align-items:center;gap:6px;margin-top:3px;}
+.res-bt{flex:1;height:4px;background:var(--bg);border-radius:2px;overflow:hidden;}
+.res-bf{height:100%;border-radius:2px;background:var(--c-active);}
+.res-ct{font-size:11px;color:var(--txt3);min-width:22px;text-align:right;}
+
+.section-wide{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:20px;}
+
+/* Workload detail panel */
+.wd-detail{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--r2);padding:16px 20px;margin-top:14px;animation:slideDown .22s ease;}
+@keyframes slideDown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.wd-detail-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.wd-detail-title{font-size:12px;font-weight:700;color:var(--txt);}
+.wd-close{background:none;border:none;cursor:pointer;color:var(--txt3);font-size:18px;line-height:1;padding:0 2px;transition:color .15s;}
+.wd-close:hover{color:var(--txt);}
+.wd-row{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
+.wd-row:last-child{margin-bottom:0;}
+.wd-lbl{font-size:11px;font-weight:600;color:var(--txt2);min-width:96px;}
+.wd-track{flex:1;height:24px;background:var(--card);border:0.5px solid var(--border);border-radius:5px;overflow:hidden;}
+.wd-fill{height:100%;border-radius:5px;display:flex;align-items:center;padding-left:9px;font-size:10px;font-weight:700;color:#fff;white-space:nowrap;transition:width .45s ease;min-width:6px;}
+.wd-cnt{font-size:13px;font-weight:700;color:var(--txt);min-width:28px;text-align:right;}
+
+/* ── STATUS BADGES ── */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap;}
+.badge.done   {background:rgba(99,153,34,.12);color:#639922;}
+.badge.active {background:rgba(55,138,221,.12);color:#378ADD;}
+.badge.overdue{background:rgba(226,75,74,.12);color:#E24B4A;}
+.badge.pending{background:rgba(136,135,128,.1);color:#888780;}
+.tag{display:inline-block;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:600;background:var(--bg);border:0.5px solid var(--border);color:var(--txt2);}
+
+/* ════ TASKS CARD VIEW ════ */
+#view-tasks{padding:0;}
+
+/* Sticky top navigation bar */
+.task-topbar{
+  position:sticky;top:0;z-index:20;
+  background:var(--card);border-bottom:0.5px solid var(--border);
+  padding:10px 24px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+}
+.task-search{
+  background:var(--bg);border:0.5px solid var(--border);
+  color:var(--txt);border-radius:var(--r2);padding:7px 12px;
+  font-size:12px;font-family:inherit;outline:none;width:220px;
+  transition:border-color .15s;
+}
+.task-search:focus{border-color:var(--c-active);}
+.task-search::placeholder{color:var(--txt3);}
+.task-divider{width:1px;height:22px;background:var(--border);margin:0 4px;}
+
+/* Category navigation pills */
+.cat-pills{display:flex;gap:5px;flex-wrap:wrap;flex:1;}
+.cat-pill{
+  padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600;
+  cursor:pointer;color:var(--txt2);white-space:nowrap;
+  border:0.5px solid var(--border);background:var(--bg);
+  transition:all .15s;text-decoration:none;
+}
+.cat-pill:hover{background:var(--card);color:var(--txt);border-color:var(--c-active);}
+.cat-pill.active{color:#fff;border-color:transparent;}
+
+/* Cards container */
+.cards-body{padding:20px 24px;display:flex;flex-direction:column;gap:20px;}
+
+/* Big category card */
+.cat-card{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);overflow:hidden;}
+.cat-card-hdr{
+  display:flex;align-items:center;gap:14px;
+  padding:14px 20px;border-bottom:0.5px solid var(--border);
+}
+.cat-card-accent{width:4px;height:36px;border-radius:2px;flex-shrink:0;}
+.cat-card-title{font-size:14px;font-weight:700;color:var(--txt);flex:1;}
+.cat-card-counts{display:flex;gap:6px;flex-wrap:wrap;}
+.cat-count-chip{padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;}
+.chip-done   {background:rgba(99,153,34,.12);color:#639922;}
+.chip-active {background:rgba(55,138,221,.12);color:#378ADD;}
+.chip-overdue{background:rgba(226,75,74,.12);color:#E24B4A;}
+.chip-pending{background:rgba(136,135,128,.1);color:#888780;}
+
+/* Sub-cards grid inside category card */
+.cat-card-body{padding:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;}
+
+/* Sub-card (level 3) */
+.sub-card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--r2);overflow:hidden;display:flex;flex-direction:column;}
+.sub-card-hdr{padding:10px 14px;border-bottom:0.5px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:8px;background:rgba(255,255,255,.7);cursor:pointer;user-select:none;}
+.sub-card-hdr:hover{background:rgba(255,255,255,1);}
+.sub-card.collapsed .sub-card-hdr{border-bottom-color:transparent;}
+.sub-card.collapsed .sub-card-body{display:none;}
+.sub-card-chevron{font-size:11px;color:var(--txt3);margin-top:2px;transition:transform .2s ease;flex-shrink:0;}
+.sub-card.collapsed .sub-card-chevron{transform:rotate(-90deg);}
+.sub-card-title{font-size:12px;font-weight:600;color:var(--txt);line-height:1.35;flex:1;}
+.sub-card-body{padding:8px;display:flex;flex-direction:column;gap:4px;flex:1;}
+.sub-card-empty{padding:10px 12px;font-size:11px;color:var(--txt3);}
+
+/* Task item (level 4+) */
+.task-item{
+  display:flex;align-items:flex-start;gap:8px;
+  padding:8px 10px;border-radius:var(--r3);
+  border:0.5px solid var(--border);background:var(--card);
+  transition:border-color .15s,box-shadow .15s;
+}
+.task-item:hover{border-color:var(--c-active);box-shadow:0 1px 6px rgba(55,138,221,.1);}
+.task-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:3px;}
+.task-dot.done   {background:var(--c-done);}
+.task-dot.active {background:var(--c-active);}
+.task-dot.overdue{background:var(--c-overdue);}
+.task-dot.pending{background:var(--border2);}
+.task-info{flex:1;min-width:0;}
+.task-name{font-size:11px;color:var(--txt);line-height:1.4;word-break:break-word;}
+.task-meta{display:flex;align-items:center;gap:5px;margin-top:5px;flex-wrap:wrap;}
+.task-date{font-size:10px;color:var(--txt3);}
+.task-date.late{color:var(--c-overdue);font-weight:600;}
+
+/* ════ GANTT ════ */
+#view-gantt{padding:22px 24px;}
+.gantt-ctrl{display:flex;gap:12px;align-items:center;background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);padding:10px 16px;margin-bottom:16px;flex-wrap:wrap;}
+.gantt-ctrl label{font-size:12px;color:var(--txt2);display:flex;align-items:center;gap:6px;}
+.gantt-ctrl select{background:var(--bg);border:0.5px solid var(--border);color:var(--txt);border-radius:var(--r2);padding:5px 9px;font-size:12px;font-family:inherit;outline:none;cursor:pointer;}
+.g-legend{display:flex;gap:14px;flex-wrap:wrap;}
+.gantt-wrap{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);overflow:hidden;}
+.gantt-inner{display:grid;}
+.gantt-names{border-right:0.5px solid var(--border);overflow:hidden;}
+.gantt-chart{overflow-x:auto;}
+.g-resizer{cursor:col-resize;background:var(--border2);position:relative;z-index:6;}
+.g-resizer:hover,.g-resizer.active{background:var(--c-active);}
+.g-resizer::before{content:'';position:absolute;top:0;bottom:0;left:-4px;right:-4px;}
+.g-resizer::after{content:'';position:absolute;top:50%;left:50%;width:2px;height:24px;transform:translate(-50%,-50%);background:var(--card);border-radius:2px;box-shadow:-4px 0 0 var(--card),4px 0 0 var(--card);}
+
+.g-nhdr{height:34px;background:var(--bg);border-bottom:0.5px solid var(--border);display:flex;align-items:center;padding:0 14px;font-size:10px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.05em;}
+.g-nc{height:33px;padding:0 14px;border-bottom:0.5px solid var(--border);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;transition:background .1s;}
+.g-nc:hover{background:var(--bg);}
+.g-nc.lv1{font-weight:700;color:var(--txt);}
+.g-nc.lv2{font-weight:600;color:var(--txt2);padding-left:22px;}
+.g-nc.lv3{color:var(--txt2);padding-left:34px;font-size:11px;}
+.g-nc.lv4{color:var(--txt3);padding-left:46px;font-size:11px;}
+
+.g-hdr{display:flex;background:var(--bg);border-bottom:0.5px solid var(--border);height:34px;align-items:stretch;}
+.g-month{flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.06em;border-right:0.5px solid var(--border);}
+.g-row{position:relative;border-bottom:0.5px solid var(--border);display:flex;align-items:center;min-height:33px;}
+.g-row:hover{background:rgba(55,138,221,.03);}
+.g-grid{position:absolute;top:0;bottom:0;width:1px;background:var(--border);opacity:.6;}
+.g-today{position:absolute;top:0;bottom:0;width:2px;z-index:3;background:rgba(226,75,74,.55);pointer-events:none;}
+.g-today-lbl{position:absolute;top:-1px;left:-16px;width:34px;font-size:8px;font-weight:700;color:var(--c-overdue);text-align:center;white-space:nowrap;}
+.g-bar{position:absolute;border-radius:4px;display:flex;align-items:center;padding:0 5px;font-size:9px;font-weight:600;color:#fff;overflow:hidden;white-space:nowrap;z-index:2;cursor:default;transition:filter .15s;}
+.g-bar:hover{filter:brightness(1.12);z-index:5;}
+.g-bar.lv1{height:19px;}
+.g-bar.lv2{height:15px;}
+.g-bar.lv3,.g-bar.lv4{height:11px;border-radius:3px;}
+.g-bar.done   {background:var(--c-done);}
+.g-bar.active {background:var(--c-active);}
+.g-bar.overdue{background:var(--c-overdue);}
+.g-bar.pending{background:var(--c-hold);}
+
+/* ── TOOLTIP ── */
+#tip{position:fixed;z-index:9999;pointer-events:none;background:var(--txt);color:#fff;border-radius:var(--r2);padding:10px 13px;font-size:12px;max-width:260px;box-shadow:0 8px 24px rgba(0,0,0,.18);opacity:0;transition:opacity .12s;}
+#tip.on{opacity:1;}
+#tip strong{display:block;margin-bottom:4px;}
+#tip .tr{color:rgba(255,255,255,.6);margin-top:2px;}
+#tip .tr span{color:#fff;}
+
+/* ════ AIM INDEX ════ */
+#view-aim{padding:22px 24px;}
+.aim-row{display:flex;align-items:center;gap:12px;padding:9px 4px;border-radius:var(--r3);cursor:pointer;transition:background .12s;}
+.aim-row:hover{background:var(--bg);}
+.aim-row+.aim-row{border-top:0.5px solid var(--border);}
+.aim-rank{width:24px;flex-shrink:0;text-align:center;font-size:11px;color:var(--txt3);font-weight:600;}
+.aim-name{flex:1;min-width:0;font-size:12.5px;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.aim-bar-track{width:220px;flex-shrink:0;height:6px;background:var(--bg);border:0.5px solid var(--border);border-radius:3px;overflow:hidden;}
+.aim-bar-fill{height:100%;border-radius:3px;transition:width .25s;}
+.aim-val{width:40px;flex-shrink:0;text-align:right;font-size:12.5px;font-weight:600;color:var(--txt);}
+
+#aim-modal-overlay{position:fixed;inset:0;background:rgba(17,24,39,.5);display:none;align-items:center;justify-content:center;z-index:300;}
+#aim-modal-overlay.on{display:flex;}
+.aim-modal{background:var(--card);border-radius:var(--r);width:600px;max-height:82vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.3);}
+.aim-modal-h{padding:18px 22px;border-bottom:0.5px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;position:sticky;top:0;background:var(--card);}
+.aim-modal-title{font-size:15px;font-weight:600;color:var(--txt);}
+.aim-modal-sub{font-size:12px;color:var(--txt3);margin-top:3px;}
+.aim-modal-close{cursor:pointer;color:var(--txt3);font-size:16px;padding:2px 6px;border-radius:5px;}
+.aim-modal-close:hover{background:var(--bg);color:var(--txt);}
+.aim-modal-b{padding:6px 22px 18px;}
+.aim-metric-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:0.5px solid var(--border);}
+.aim-metric-row:last-child{border-bottom:none;}
+.aim-metric-name{flex:1;min-width:0;font-size:12.5px;color:var(--txt);}
+.aim-metric-cat{display:block;font-size:10px;color:var(--txt3);margin-top:1px;}
+.aim-metric-bar-track{width:130px;flex-shrink:0;height:6px;background:var(--bg);border:0.5px solid var(--border);border-radius:3px;overflow:hidden;}
+.aim-metric-bar-track .aim-bar-fill{height:100%;}
+.aim-metric-val{width:44px;flex-shrink:0;text-align:right;font-size:13px;font-weight:600;color:var(--txt);}
+.aim-arrow{width:18px;flex-shrink:0;text-align:center;font-size:12px;font-weight:700;line-height:1;}
+.aim-arrow.neutral{color:#9aa0a8;}
+.aim-arrow.up{color:#639922;}
+.aim-arrow.down{color:#E24B4A;}
+
+/* ── LOADING ── */
+#loading{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100;gap:14px;}
+#loading .spin{width:32px;height:32px;border:2.5px solid var(--border);border-top-color:var(--c-active);border-radius:50%;animation:spin .6s linear infinite;}
+#loading p{font-size:13px;color:var(--txt3);}
+.empty{text-align:center;padding:28px 16px;color:var(--txt3);font-size:12px;}
+</style>
+</head>
+<body>
+
+<div id="loading"><div class="spin"></div><p>Загрузка данных...</p></div>
+<div id="tip"></div>
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <div class="sb-logo">
+    <div class="sb-bank">SQB · PMO</div>
+    <div class="sb-name">AI Трансформация</div>
+    <div class="sb-sub">Аналитическая панель</div>
+  </div>
+  <div class="sb-nav">
+    <div class="sb-sect">Просмотр</div>
+    <div class="sb-item active" onclick="showView('dashboard',this)"><span class="sb-icon">◈</span> Дашборд</div>
+    <div class="sb-item" onclick="showView('tasks',this)"><span class="sb-icon">≡</span> Задачи</div>
+    <div class="sb-item" onclick="showView('gantt',this)"><span class="sb-icon">▦</span> Ганта</div>
+    <div class="sb-item" onclick="showView('aim',this)"><span class="sb-icon">◆</span> Индекс AI-зрелости</div>
+  </div>
+  <div class="sb-foot" id="sb-foot"></div>
+</nav>
+
+<!-- MAIN -->
+<div id="main">
+  <div id="topbar">
+    <span class="tb-title">PMO Dashboard</span>
+    <span class="tb-sep">·</span>
+    <span class="tb-sub">AI Трансформация SQB</span>
+    <div class="tb-space"></div>
+    <span class="tb-stamp" id="tb-stamp"></span>
+    <button id="reload-btn" onclick="reloadData()"><span class="spin">↻</span> Обновить</button>
+  </div>
+  <div id="err-banner">⚠ Ошибка загрузки данных · Сервер недоступен</div>
+
+  <div id="content">
+
+    <!-- ════ DASHBOARD ════ -->
+    <div id="view-dashboard" class="view active">
+
+      <div style="padding:22px 24px 0">
+        <!-- KPI -->
+        <div class="kpi-row" id="kpi-row"></div>
+
+        <!-- Donuts -->
+        <div class="row2">
+          <div class="panel" style="margin-bottom:0;display:flex;flex-direction:column">
+            <div class="panel-h"><span class="panel-t">Распределение по статусу</span></div>
+            <div class="panel-b" style="display:flex;flex-direction:column;flex:1">
+              <div class="donut-wrap ch-wrap h200"><canvas id="ch-status"></canvas>
+                <div class="dc" id="dc-status"><div class="big">—</div><div class="sm">задач</div></div>
+              </div>
+              <div class="legend" id="lg-status" style="margin-top:auto;padding-top:12px"></div>
+            </div>
+          </div>
+          <div class="panel" style="margin-bottom:0">
+            <div class="panel-h"><span class="panel-t">Прогресс по направлениям</span></div>
+            <div class="panel-b">
+              <div class="ring-wrap">
+                <svg viewBox="0 0 100 100" width="82" height="82" style="flex-shrink:0">
+                  <circle cx="50" cy="50" r="38" fill="none" stroke="#e0dfd8" stroke-width="9"/>
+                  <circle cx="50" cy="50" r="38" fill="none" stroke="#639922" stroke-width="9"
+                    stroke-linecap="round" stroke-dasharray="238.76" stroke-dashoffset="238.76"
+                    transform="rotate(-90 50 50)" id="ring-fill"/>
+                </svg>
+                <div class="ring-text">
+                  <div class="ring-pct" id="ring-pct">0%</div>
+                  <div class="ring-lbl">Общий</div>
+                </div>
+              </div>
+              <div class="mini-list" id="mini-list"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stacked bar + Trend side by side -->
+        <div style="display:flex;gap:16px;margin-bottom:16px;">
+          <div class="panel" style="margin-bottom:0;flex:1;min-width:0">
+            <div class="panel-h"><span class="panel-t">Статус задач по направлениям</span></div>
+            <div class="panel-b">
+              <div class="ch-wrap h260"><canvas id="ch-stack"></canvas></div>
+              <div class="legend" id="lg-stack"></div>
+            </div>
+          </div>
+          <div class="panel" style="margin-bottom:0;flex:1;min-width:0">
+            <div class="panel-h">
+              <span class="panel-t">Задачи по месяцам</span>
+              <div class="legend" id="lg-trend" style="margin-top:0"></div>
+            </div>
+            <div class="panel-b">
+              <div class="ch-wrap h260"><canvas id="ch-trend"></canvas></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Workload (full width, clickable) -->
+      <div class="section-wide" style="margin-bottom:0">
+        <div class="panel-h">
+          <span class="panel-t">Нагрузка по направлениям</span>
+          <span style="font-size:11px;color:var(--txt3)">Нажмите на столбец для детализации</span>
+        </div>
+        <div class="panel-b">
+          <div class="ch-wrap h240"><canvas id="ch-work" style="cursor:pointer"></canvas></div>
+          <div class="legend" id="lg-work"></div>
+          <div id="wd-detail" style="display:none"></div>
+        </div>
+      </div>
+
+      <div style="height:24px"></div>
+    </div>
+
+    <!-- ════ TASKS ════ -->
+    <div id="view-tasks" class="view">
+      <div class="task-topbar">
+        <input class="task-search" type="text" id="task-search" placeholder="🔍  Поиск задачи..." oninput="filterCards()">
+        <div class="task-divider"></div>
+        <div class="cat-pills" id="cat-pills"></div>
+      </div>
+      <div class="cards-body" id="cards-body"></div>
+    </div>
+
+    <!-- ════ GANTT ════ -->
+    <div id="view-gantt" class="view">
+      <div class="gantt-ctrl">
+        <label>Глубина:
+          <select id="g-level" onchange="renderGantt()">
+            <option value="2">Уровень 1–2</option>
+            <option value="3" selected>Уровень 1–3</option>
+            <option value="4">Уровень 1–4</option>
+            <option value="99">Все</option>
+          </select>
+        </label>
+        <label>Тип:
+          <select id="g-type" onchange="renderGantt()">
+            <option value="all">Все задачи</option>
+            <option value="summary">Только группы</option>
+            <option value="leaf">Только задачи</option>
+          </select>
+        </label>
+        <div class="g-legend">
+          <div class="li"><div class="ld" style="background:var(--c-done)"></div>Завершено</div>
+          <div class="li"><div class="ld" style="background:var(--c-active)"></div>В работе</div>
+          <div class="li"><div class="ld" style="background:var(--c-overdue)"></div>Просрочено</div>
+          <div class="li"><div class="ld" style="background:var(--c-hold)"></div>Не начато</div>
+        </div>
+      </div>
+      <div class="gantt-wrap"><div class="gantt-inner" id="g-inner"></div></div>
+    </div>
+
+    <!-- ════ AIM INDEX ════ -->
+    <div id="view-aim" class="view">
+      <div class="panel" style="margin:0">
+        <div class="panel-h">
+          <span class="panel-t">Индекс AI-зрелости подразделений</span>
+          <span style="font-size:11px;color:var(--txt3)">Нажмите на подразделение для детализации</span>
+        </div>
+        <div class="panel-b" id="aim-list"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- AIM DETAIL MODAL -->
+<div id="aim-modal-overlay" onclick="if(event.target===this) closeAimModal()">
+  <div class="aim-modal">
+    <div class="aim-modal-h">
+      <div>
+        <div class="aim-modal-title" id="aim-modal-title"></div>
+        <div class="aim-modal-sub" id="aim-modal-sub"></div>
+      </div>
+      <span class="aim-modal-close" onclick="closeAimModal()">✕</span>
+    </div>
+    <div class="aim-modal-b" id="aim-modal-body"></div>
+  </div>
+</div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────
+let DATA = null, today = '';
+let AIM = null;
+
+const COLORS = { done:'#639922', active:'#378ADD', overdue:'#E24B4A', pending:'#B5D4F4', hold:'#888780' };
+const CAT_COLORS = ['#378ADD','#888780','#7F77DD','#1D9E75','#EF9F27','#B5D4F4','#639922'];
+const MR = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
+const SL = { done:'Завершено', active:'В работе', overdue:'Просрочено', pending:'Не начато' };
+const AV_COLORS = ['#378ADD','#639922','#EF9F27','#7F77DD','#1D9E75','#E24B4A','#888780','#B5D4F4','#1a1f2e'];
+
+// ─── BOOTSTRAP ───────────────────────────────────────────────
+async function fetchData() {
+  try {
+    const r = await fetch('/api/data');
+    if (!r.ok) throw new Error(r.status);
+    DATA = await r.json();
+    today = DATA.meta.today;
+    if (!AIM) {
+      const ar = await fetch('/api/aim');
+      AIM = await ar.json();
+    }
+    init();
+    document.getElementById('loading').style.display = 'none';
+  } catch(e) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('err-banner').classList.add('on');
+  }
+}
+
+function init() {
+  renderSidebar();
+  renderDashboard();
+  renderCards();
+  renderGantt();
+  renderAim();
+}
+
+async function reloadData() {
+  const btn = document.getElementById('reload-btn');
+  btn.classList.add('loading'); btn.disabled = true;
+  try {
+    await fetch('/api/reload');
+    const r = await fetch('/api/data'); DATA = await r.json(); today = DATA.meta.today;
+    renderSidebar(); renderDashboard(); renderCards(); renderGantt();
+  } catch(e) { document.getElementById('err-banner').classList.add('on'); }
+  btn.classList.remove('loading'); btn.disabled = false;
+}
+
+// ─── SIDEBAR ─────────────────────────────────────────────────
+function renderSidebar() {
+  const m = DATA.meta;
+  document.getElementById('sb-foot').innerHTML =
+    `<strong>Обновлено:</strong> ${fd(m.saved)}<br><strong>Сегодня:</strong> ${fd(today)}<br><br>` +
+    `<strong>Горизонт:</strong><br>${fd(m.start)} — ${fd(m.finish)}`;
+  document.getElementById('tb-stamp').textContent = 'Дата данных: ' + fd(m.saved);
+}
+
+// ─── DASHBOARD ───────────────────────────────────────────────
+function renderDashboard() {
+  const today = DATA.meta.today;
+  const allLeaf = DATA.tasks.filter(t => !t.summary);
+  // For done/active/pending: only tasks whose planned start has passed.
+  // For overdue: all leaf tasks regardless of start date (a missed deadline
+  // is overdue even if the planned start is in the future or missing).
+  const started = allLeaf.filter(t => t.start && t.start <= today);
+  const sf = { done:0, active:0, overdue:0, pending:0 };
+  started.forEach(t => { if (t.status !== 'overdue') sf[t.status]++; });
+  allLeaf.forEach(t => { if (t.status === 'overdue') sf.overdue++; });
+  const stot = started.length || 1;
+
+  // KPI
+  document.getElementById('kpi-row').innerHTML = `
+    <div class="kpi-card kpi-total">
+      <div class="kpi-label">Всего задач</div><div class="kpi-value">${started.length}</div>
+      <div class="kpi-sub">Начаты до сегодня</div>
+    </div>
+    <div class="kpi-card kpi-done">
+      <div class="kpi-label">Завершено</div><div class="kpi-value">${sf.done}</div>
+      <div class="kpi-sub">${p(sf.done,stot)}% задач</div>
+    </div>
+    <div class="kpi-card kpi-active">
+      <div class="kpi-label">В работе</div><div class="kpi-value" style="color:var(--c-active)">${sf.active}</div>
+      <div class="kpi-sub">${p(sf.active,stot)}% задач</div>
+    </div>
+    <div class="kpi-card kpi-over">
+      <div class="kpi-label">Просрочено</div><div class="kpi-value">${sf.overdue}</div>
+      <div class="kpi-sub">${p(sf.overdue,stot)}% — требуют внимания</div>
+    </div>`;
+
+  // Category data
+  const cats = getCats();
+  drawStatusDonut(sf, stot);
+
+  drawProgress(cats);
+  drawStackedBar(cats);
+  drawTrend();
+  drawWorkload(cats);
+}
+
+function getCats() {
+  return DATA.tasks.filter(t => t.level===2 && t.summary).map((cat,i) => {
+    const pfx = cat.wbs + '.';
+    const kids = DATA.tasks.filter(t => !t.summary && t.wbs.startsWith(pfx));
+    return { ...cat, kids,
+      done:    kids.filter(t=>t.status==='done').length,
+      active:  kids.filter(t=>t.status==='active').length,
+      overdue: kids.filter(t=>t.status==='overdue').length,
+      pending: kids.filter(t=>t.status==='pending').length,
+      color: CAT_COLORS[i] };
+  });
+}
+
+// ── PROGRESS BY DIRECTION ──
+function drawProgress(cats) {
+  const top = DATA.tasks.find(t => t.level === 1);
+  const overall = top ? top.pct : 0;
+  const circ = 238.76; // 2π×38
+  document.getElementById('ring-fill').setAttribute('stroke-dashoffset', (circ*(1-overall/100)).toFixed(2));
+  document.getElementById('ring-pct').textContent = overall + '%';
+
+  document.getElementById('mini-list').innerHTML = cats.map((c, i) => `
+    <div>
+      <div class="mini-hdr">
+        <span class="mini-name" title="${esc(c.name)}">${esc(c.name)}</span>
+        <span class="mini-pct">${c.pct}%</span>
+      </div>
+      <div class="mini-track"><div class="mini-fill" style="width:${c.pct}%;background:${CAT_COLORS[i]}"></div></div>
+    </div>`).join('');
+}
+
+// Donut helpers
+function mkDonut(id, data, labels, colors, center) {
+  const canvas = document.getElementById(id);
+  if (canvas._chart) canvas._chart.destroy();
+  const ch = new Chart(canvas.getContext('2d'), {
+    type:'doughnut',
+    data:{ labels, datasets:[{ data, backgroundColor:colors, borderWidth:2, borderColor:'#fff', hoverOffset:5 }] },
+    options:{ responsive:true, maintainAspectRatio:false, cutout:'68%',
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:c=>` ${c.label}: ${c.raw}` } } } }
+  });
+  canvas._chart = ch;
+  return ch;
+}
+
+function mkLegend(id, labels, colors, extras) {
+  document.getElementById(id).innerHTML = labels.map((l,i) =>
+    `<div class="li"><div class="ld" style="background:${colors[i]}"></div>${l}${extras?': <strong>'+extras[i]+'</strong>':''}</div>`
+  ).join('');
+}
+
+function drawStatusDonut(s, tot) {
+  const vals=[s.done,s.active,s.overdue,s.pending], lbs=[SL.done,SL.active,SL.overdue,SL.pending];
+  const cols=[COLORS.done,COLORS.active,COLORS.overdue,COLORS.hold];
+  mkDonut('ch-status',vals,lbs,cols);
+  document.getElementById('dc-status').innerHTML=`<div class="big">${tot}</div><div class="sm">задач</div>`;
+  mkLegend('lg-status',lbs,cols,vals);
+}
+
+
+let chStack=null;
+function drawStackedBar(cats) {
+  const ctx=document.getElementById('ch-stack').getContext('2d');
+  if(chStack) chStack.destroy();
+  const opts={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},
+    scales:{x:{stacked:true,grid:{display:false},ticks:{font:{size:10},color:'#94a3b8'}},
+            y:{stacked:true,grid:{color:'#f0ede8'},ticks:{font:{size:10},color:'#94a3b8',precision:0}}}};
+  chStack=new Chart(ctx,{type:'bar',data:{
+    labels:cats.map(c=>c.name.slice(0,14)),
+    datasets:[
+      {label:'Завершено', data:cats.map(c=>c.done),   backgroundColor:COLORS.done,   stack:'s'},
+      {label:'В работе',  data:cats.map(c=>c.active),  backgroundColor:COLORS.active, stack:'s'},
+      {label:'Просрочено',data:cats.map(c=>c.overdue), backgroundColor:COLORS.overdue,stack:'s'},
+      {label:'Не начато', data:cats.map(c=>c.pending), backgroundColor:COLORS.pending,stack:'s'},
+    ]},options:opts});
+  mkLegend('lg-stack',[SL.done,SL.active,SL.overdue,SL.pending],[COLORS.done,COLORS.active,COLORS.overdue,COLORS.hold]);
+}
+
+let chTrend=null;
+function drawTrend() {
+  // Bucket tasks by finish month
+  const bk={};
+  DATA.tasks.filter(t=>!t.summary&&t.finish).forEach(t=>{
+    const k=t.finish.slice(0,7);
+    if(!bk[k]) bk[k]={done:0,active:0,overdue:0,pending:0};
+    bk[k][t.status]=(bk[k][t.status]||0)+1;
+  });
+  const keys=Object.keys(bk).sort();
+  const labels=keys.map(k=>{const[y,m]=k.split('-');return MR[parseInt(m)-1]+'\n\''+y.slice(2);});
+  const totals=keys.map(k=>bk[k].done+bk[k].active+bk[k].overdue+bk[k].pending);
+
+  // Plugin: draw total count above each stacked bar
+  const totalLabelPlugin={
+    id:'totalLabels',
+    afterDatasetsDraw(chart){
+      const{ctx,scales:{x,y}}=chart;
+      totals.forEach((total,i)=>{
+        if(!total) return;
+        const xPos=x.getPixelForValue(i);
+        const yPos=y.getPixelForValue(total);
+        ctx.save();
+        ctx.fillStyle='#64748b';
+        ctx.font='bold 11px system-ui,-apple-system,sans-serif';
+        ctx.textAlign='center';
+        ctx.textBaseline='bottom';
+        ctx.fillText(total, xPos, yPos-3);
+        ctx.restore();
+      });
+    }
+  };
+
+  const ctx=document.getElementById('ch-trend').getContext('2d');
+  if(chTrend) chTrend.destroy();
+  chTrend=new Chart(ctx,{
+    type:'bar',
+    plugins:[totalLabelPlugin],
+    data:{
+      labels,
+      datasets:[
+        {label:'Завершено', data:keys.map(k=>bk[k].done),    backgroundColor:COLORS.done,    stack:'s', borderRadius:0},
+        {label:'В работе',  data:keys.map(k=>bk[k].active),  backgroundColor:COLORS.active,  stack:'s', borderRadius:0},
+        {label:'Просрочено',data:keys.map(k=>bk[k].overdue), backgroundColor:COLORS.overdue, stack:'s', borderRadius:0},
+        {label:'Не начато', data:keys.map(k=>bk[k].pending), backgroundColor:'#dde8f5',      stack:'s',
+          borderRadius:{topLeft:4,topRight:4,bottomLeft:0,bottomRight:0}},
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          mode:'index', intersect:false,
+          callbacks:{
+            title:items=>{
+              const k=keys[items[0].dataIndex];
+              const[y,m]=k.split('-');
+              return MR[parseInt(m)-1]+' '+y+' · Всего: '+totals[items[0].dataIndex];
+            },
+            label:ctx=>{
+              const v=ctx.raw;
+              return v>0 ? ` ${ctx.dataset.label}: ${v}` : null;
+            }
+          }
+        }
+      },
+      scales:{
+        x:{stacked:true, grid:{display:false}, ticks:{font:{size:10},color:'#94a3b8'}},
+        y:{stacked:true, grid:{color:'#f0ede8'}, ticks:{font:{size:10},color:'#94a3b8',precision:0},
+           title:{display:true,text:'Задач',font:{size:10},color:'#94a3b8'}}
+      }
+    }
+  });
+
+  mkLegend('lg-trend',
+    ['Завершено','В работе','Просрочено','Не начато'],
+    [COLORS.done, COLORS.active, COLORS.overdue, '#dde8f5']
+  );
+}
+
+
+// ─── WORKLOAD BY DIRECTION ───────────────────────────────────
+let chWork = null;
+
+function drawWorkload(cats) {
+  const td = DATA.meta.today;
+  const wcats = cats.map(c => {
+    const kids = c.kids.filter(t => t.start && t.start <= td);
+    return { ...c, kids,
+      done:    kids.filter(t => t.status === 'done').length,
+      active:  kids.filter(t => t.status === 'active').length,
+      overdue: kids.filter(t => t.status === 'overdue').length,
+      pending: kids.filter(t => t.status === 'pending').length };
+  });
+  const labels = wcats.map(c => c.name);
+  const totals = wcats.map(c => c.kids.length);
+
+  const ctx = document.getElementById('ch-work').getContext('2d');
+  if (chWork) chWork.destroy();
+  chWork = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Завершено', data: wcats.map(c => c.done),    backgroundColor: COLORS.done,    stack: 's', borderRadius: 0, barThickness: 14 },
+        { label: 'В работе',  data: wcats.map(c => c.active),  backgroundColor: COLORS.active,  stack: 's', borderRadius: 0, barThickness: 14 },
+        { label: 'Просрочено',data: wcats.map(c => c.overdue), backgroundColor: COLORS.overdue, stack: 's', borderRadius: 0, barThickness: 14 },
+        { label: 'Не начато', data: wcats.map(c => c.pending), backgroundColor: '#dde8f5',      stack: 's', barThickness: 14,
+          borderRadius: { topRight: 4, bottomRight: 4, topLeft: 0, bottomLeft: 0 } },
+      ]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          mode: 'index', intersect: false, axis: 'y',
+          callbacks: {
+            title: items => wcats[items[0].dataIndex].name + ' · Всего: ' + totals[items[0].dataIndex],
+            label: ctx => ctx.raw > 0 ? ` ${ctx.dataset.label}: ${ctx.raw}` : null
+          }
+        }
+      },
+      onClick(event, elements) {
+        if (!elements.length) return;
+        const idx = elements[0].index;
+        showWorkloadDetail(wcats[idx]);
+      },
+      onHover(event, elements) {
+        event.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+      },
+      scales: {
+        x: { stacked: true, grid: { color: '#f0ede8' }, ticks: { font: { size: 10 }, color: '#94a3b8', precision: 0 } },
+        y: { stacked: true, grid: { display: false }, ticks: { font: { size: 10 }, color: '#94a3b8' } }
+      }
+    }
+  });
+
+  mkLegend('lg-work',
+    ['Завершено', 'В работе', 'Просрочено', 'Не начато'],
+    [COLORS.done, COLORS.active, COLORS.overdue, '#dde8f5']
+  );
+}
+
+function showWorkloadDetail(cat) {
+  const panel = document.getElementById('wd-detail');
+  const total = cat.kids.length || 1;
+  const rows = [
+    { label: 'Завершено',  count: cat.done,    color: COLORS.done },
+    { label: 'В работе',   count: cat.active,  color: COLORS.active },
+    { label: 'Просрочено', count: cat.overdue, color: COLORS.overdue },
+    { label: 'Не начато',  count: cat.pending, color: '#dde8f5' },
+  ];
+  panel.innerHTML = `
+    <div class="wd-detail">
+      <div class="wd-detail-hdr">
+        <span class="wd-detail-title">${esc(cat.name)} — ${cat.kids.length} задач</span>
+        <button class="wd-close" onclick="hideWorkloadDetail()" title="Закрыть">×</button>
+      </div>
+      ${rows.map(r => {
+        const w = Math.round(r.count / total * 100);
+        const txtColor = r.color === '#dde8f5' ? '#64748b' : '#fff';
+        return `
+        <div class="wd-row">
+          <span class="wd-lbl">${r.label}</span>
+          <div class="wd-track">
+            <div class="wd-fill" style="width:${w}%;background:${r.color};color:${txtColor}">${r.count > 0 ? r.count : ''}</div>
+          </div>
+          <span class="wd-cnt">${r.count}</span>
+        </div>`;
+      }).join('')}
+    </div>`;
+  panel.style.display = 'block';
+}
+
+function hideWorkloadDetail() {
+  const panel = document.getElementById('wd-detail');
+  panel.style.display = 'none';
+  panel.innerHTML = '';
+}
+
+// ─── TASK CARDS ──────────────────────────────────────────────
+function renderCards() {
+  const cats = DATA.tasks.filter(t => t.level === 2 && t.summary);
+  const pills = document.getElementById('cat-pills');
+  const body  = document.getElementById('cards-body');
+
+  // Navigation pills
+  pills.innerHTML = cats.map((cat, i) =>
+    `<button class="cat-pill" id="pill-${cat.uid}" data-color="${CAT_COLORS[i]}"
+       onclick="scrollToCard('cc-${cat.uid}')">${esc(cat.name)}</button>`
+  ).join('');
+
+  // Big cards
+  body.innerHTML = cats.map((cat, i) => buildCatCard(cat, i)).join('');
+}
+
+function buildCatCard(cat, i) {
+  const pfx = cat.wbs + '.';
+  const lv3 = DATA.tasks.filter(t => t.level === 3 && t.wbs.startsWith(pfx));
+  // direct leaf tasks (level 4+ without a lv3 parent in our list, rare case)
+  const countsHtml = buildCounts(cat, pfx);
+
+  const subcardsHtml = lv3.length
+    ? lv3.map(sub => buildSubCard(sub)).join('')
+    : `<div class="empty">Нет подзадач</div>`;
+
+  return `
+    <div class="cat-card" id="cc-${cat.uid}" data-uid="${cat.uid}">
+      <div class="cat-card-hdr">
+        <div class="cat-card-accent" style="background:${CAT_COLORS[i]}"></div>
+        <div class="cat-card-title">${esc(cat.name)}</div>
+        <div class="cat-card-counts">${countsHtml}</div>
+      </div>
+      <div class="cat-card-body">${subcardsHtml}</div>
+    </div>`;
+}
+
+function buildCounts(cat, pfx) {
+  const kids = DATA.tasks.filter(t => !t.summary && t.wbs.startsWith(pfx));
+  const d=kids.filter(t=>t.status==='done').length;
+  const a=kids.filter(t=>t.status==='active').length;
+  const o=kids.filter(t=>t.status==='overdue').length;
+  const pe=kids.filter(t=>t.status==='pending').length;
+  const chips=[];
+  if(d)  chips.push(`<span class="cat-count-chip chip-done">✓ ${d}</span>`);
+  if(a)  chips.push(`<span class="cat-count-chip chip-active">● ${a}</span>`);
+  if(o)  chips.push(`<span class="cat-count-chip chip-overdue">! ${o}</span>`);
+  if(pe) chips.push(`<span class="cat-count-chip chip-pending">○ ${pe}</span>`);
+  return chips.join('');
+}
+
+function buildSubCard(sub) {
+  const pfx = sub.wbs + '.';
+  const tasks = DATA.tasks.filter(t => t.level >= 4 && t.wbs.startsWith(pfx));
+  const taskItems = tasks.map(t => buildTaskItem(t)).join('');
+  const hasTasks = tasks.length > 0;
+  return `
+    <div class="sub-card" data-sub="${sub.uid}">
+      <div class="sub-card-hdr"${hasTasks ? ' onclick="toggleSubCard(this)"' : ''} style="${hasTasks ? '' : 'cursor:default'}">
+        <span class="sub-card-title">${esc(sub.name)}</span>
+        <span class="badge ${sub.status}">${SL[sub.status]||sub.status}</span>
+        ${hasTasks ? '<span class="sub-card-chevron">▾</span>' : ''}
+      </div>
+      ${hasTasks ? `<div class="sub-card-body">${taskItems}</div>` : ''}
+    </div>`;
+}
+
+function buildTaskItem(task) {
+  const isLate = task.finish && task.finish < today && task.pct < 100;
+  const res = task.resources.slice(0,2).map(r=>`<span class="tag">${esc(r)}</span>`).join('');
+  return `
+    <div class="task-item" data-task="${task.uid}" data-name="${task.name.toLowerCase()}">
+      <div class="task-dot ${task.status}"></div>
+      <div class="task-info">
+        <div class="task-name">${esc(task.name)}</div>
+        <div class="task-meta">
+          ${task.finish ? `<span class="task-date${isLate?' late':''}">${fd(task.finish)}</span>` : ''}
+          ${res}
+          <span class="badge ${task.status}">${SL[task.status]||task.status}</span>
+        </div>
+      </div>
+    </div>`;
+}
+
+function toggleSubCard(hdr) {
+  hdr.closest('.sub-card').classList.toggle('collapsed');
+}
+
+function scrollToCard(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const topbarH = (document.querySelector('.task-topbar')||{offsetHeight:52}).offsetHeight;
+  const container = document.getElementById('content');
+  // getBoundingClientRect is relative to viewport; adjust by current scroll
+  const rect = el.getBoundingClientRect();
+  const contentRect = container.getBoundingClientRect();
+  container.scrollTo({ top: container.scrollTop + rect.top - contentRect.top - topbarH - 12, behavior: 'smooth' });
+}
+
+function filterCards() {
+  const q = document.getElementById('task-search').value.toLowerCase().trim();
+  if (!q) {
+    document.querySelectorAll('.task-item,.sub-card,.cat-card').forEach(el => el.style.display = '');
+    return;
+  }
+  document.querySelectorAll('.task-item').forEach(el => {
+    el.style.display = el.dataset.name && el.dataset.name.includes(q) ? '' : 'none';
+  });
+  // Hide empty sub-cards
+  document.querySelectorAll('.sub-card').forEach(sc => {
+    const hasVisible = [...sc.querySelectorAll('.task-item')].some(t => t.style.display !== 'none');
+    sc.style.display = hasVisible ? '' : 'none';
+  });
+  // Hide empty cat-cards
+  document.querySelectorAll('.cat-card').forEach(cc => {
+    const hasVisible = [...cc.querySelectorAll('.sub-card')].some(s => s.style.display !== 'none');
+    cc.style.display = hasVisible ? '' : 'none';
+  });
+}
+
+// Active pill highlight on scroll
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('content').addEventListener('scroll', updateActivePill, { passive: true });
+});
+function updateActivePill() {
+  const container = document.getElementById('content');
+  const scrollTop = container.scrollTop;
+  const contentTop = container.getBoundingClientRect().top;
+  const topbarH = (document.querySelector('.task-topbar')||{offsetHeight:52}).offsetHeight + 20;
+  let activeUid = null;
+  document.querySelectorAll('.cat-card[data-uid]').forEach(card => {
+    const top = card.getBoundingClientRect().top - contentTop;
+    if (top <= topbarH + 10) activeUid = card.dataset.uid;
+  });
+  document.querySelectorAll('.cat-pill').forEach(p => {
+    const isActive = p.id === 'pill-' + activeUid;
+    p.classList.toggle('active', isActive);
+    p.style.background = isActive ? p.dataset.color : '';
+    p.style.color = isActive ? '#fff' : '';
+    p.style.borderColor = isActive ? 'transparent' : '';
+  });
+}
+
+// ─── GANTT ───────────────────────────────────────────────────
+function renderGantt() {
+  const maxLv = parseInt(document.getElementById('g-level').value);
+  const tp    = document.getElementById('g-type').value;
+  const pStart = new Date('2026-01-01'), pEnd = new Date('2027-03-01');
+  const totalMs = pEnd - pStart;
+  const MW = 80;
+  const months = [];
+  let cur = new Date(pStart);
+  while(cur < pEnd){ months.push(new Date(cur)); cur=new Date(cur.getFullYear(),cur.getMonth()+1,1); }
+  const totalW = months.length * MW;
+
+  const gt = DATA.tasks.filter(t => {
+    if(t.level===0 || t.level>maxLv) return false;
+    if(tp==='summary' && !t.summary) return false;
+    if(tp==='leaf' && t.summary) return false;
+    return true;
+  });
+
+  const todayPx = Math.max(0,(new Date(today)-pStart)/totalMs*totalW);
+
+  const namesHtml = gt.map(t=>{
+    const lv=Math.min(t.level,4);
+    return `<div class="g-nc lv${lv}" title="${esc(t.name)}">${t.summary?'':'· '}${esc(t.name)}</div>`;
+  }).join('');
+
+  const hdrHtml = months.map(m=>
+    `<div class="g-month" style="width:${MW}px">${MR[m.getMonth()]} '${String(m.getFullYear()).slice(2)}</div>`
+  ).join('');
+
+  const barsHtml = gt.map(t=>{
+    const lines=months.map((_,i)=>`<div class="g-grid" style="left:${i*MW}px"></div>`).join('');
+    if(!t.start||!t.finish) return `<div class="g-row" style="min-width:${totalW}px">${lines}</div>`;
+    const s=new Date(t.start),f=new Date(t.finish);
+    const left=Math.max(0,(s-pStart)/totalMs*totalW);
+    const w=Math.max(4,(f-s)/totalMs*totalW);
+    const lv=Math.min(t.level,4);
+    const tip=JSON.stringify({name:t.name,wbs:t.wbs,start:t.start,finish:t.finish,status:SL[t.status]||t.status,res:t.resources.join(', ')||'—'});
+    return `<div class="g-row" style="min-width:${totalW}px">
+      ${lines}
+      <div class="g-today" style="left:${todayPx}px"><div class="g-today-lbl">сегодня</div></div>
+      <div class="g-bar lv${lv} ${t.status}" style="left:${left}px;width:${w}px"
+           data-tip='${tip}' onmouseenter="showTip(event,this)" onmouseleave="hideTip()"></div>
+    </div>`;
+  }).join('');
+
+  const inner = document.getElementById('g-inner');
+  inner.style.gridTemplateColumns = `${GNW}px 6px 1fr`;
+  inner.innerHTML =
+    `<div class="gantt-names"><div class="g-nhdr">Задача</div>${namesHtml}</div>
+     <div class="g-resizer" id="g-resizer"></div>
+     <div class="gantt-chart">
+       <div style="position:relative;min-width:${totalW}px">
+         <div class="g-hdr" style="width:${totalW}px">${hdrHtml}</div>
+         <div style="position:relative">${barsHtml}</div>
+       </div>
+     </div>`;
+  initGanttResizer();
+}
+
+// ─── GANTT NAME COLUMN RESIZE ──────────────────────────────────
+let GNW = 260;
+function initGanttResizer() {
+  const rz = document.getElementById('g-resizer');
+  if(!rz) return;
+  rz.onmousedown = e => {
+    e.preventDefault();
+    rz.classList.add('active');
+    const startX = e.clientX, startW = GNW;
+    const inner = document.getElementById('g-inner');
+    function onMove(ev){
+      GNW = Math.max(120, Math.min(700, startW + (ev.clientX - startX)));
+      inner.style.gridTemplateColumns = `${GNW}px 6px 1fr`;
+    }
+    function onUp(){
+      rz.classList.remove('active');
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  };
+}
+
+// ─── TOOLTIP ─────────────────────────────────────────────────
+const tipEl = document.getElementById('tip');
+function showTip(e, el) {
+  try {
+    const d = JSON.parse(el.dataset.tip);
+    tipEl.innerHTML=`<strong>${esc(d.name)}</strong>
+      <div class="tr">WBS: <span>${d.wbs}</span></div>
+      <div class="tr">Начало: <span>${fd(d.start)}</span></div>
+      <div class="tr">Конец: <span>${fd(d.finish)}</span></div>
+      <div class="tr">Статус: <span>${d.status}</span></div>
+      <div class="tr">Ресурс: <span>${d.res}</span></div>`;
+    posTip(e); tipEl.classList.add('on');
+  } catch(_){}
+}
+function hideTip(){ tipEl.classList.remove('on'); }
+function posTip(e){
+  const mx=e.clientX+14,my=e.clientY+10;
+  tipEl.style.left=(mx+tipEl.offsetWidth>innerWidth?mx-tipEl.offsetWidth-24:mx)+'px';
+  tipEl.style.top=(my+tipEl.offsetHeight>innerHeight?my-tipEl.offsetHeight-18:my)+'px';
+}
+document.addEventListener('mousemove',e=>{if(tipEl.classList.contains('on'))posTip(e);});
+
+// ─── AIM INDEX ───────────────────────────────────────────────
+function aimColor(v) {
+  if (v >= 70) return 'var(--c-done)';
+  if (v >= 40) return 'var(--c-amber)';
+  return 'var(--c-overdue)';
+}
+
+function getTrendArrow(curr, prev) {
+  if (prev == null || curr == null) return { cls: 'neutral', sym: '−', title: 'Нет данных за прошлый период' };
+  const diff = Math.round((curr - prev) * 10) / 10;
+  if (diff > 0) return { cls: 'up',   sym: '▲', title: `+${diff} к прошлому месяцу` };
+  if (diff < 0) return { cls: 'down', sym: '▼', title: `${diff} к прошлому месяцу` };
+  return { cls: 'neutral', sym: '−', title: 'Без изменений' };
+}
+
+function renderAim() {
+  if (!AIM) return;
+  const list = document.getElementById('aim-list');
+  list.innerHTML = AIM.departments.map(d => {
+    const arrow = getTrendArrow(d.total, d.prev_total);
+    return `
+    <div class="aim-row" onclick="openAimModal(${d.id})">
+      <div class="aim-rank">${d.id}</div>
+      <div class="aim-name">${esc(d.name)}</div>
+      <div class="aim-bar-track"><div class="aim-bar-fill" style="width:${d.total}%;background:${aimColor(d.total)}"></div></div>
+      <div class="aim-val">${d.total}</div>
+      <div class="aim-arrow ${arrow.cls}" title="${arrow.title}">${arrow.sym}</div>
+    </div>`;
+  }).join('');
+}
+
+function openAimModal(id) {
+  const d = AIM.departments.find(x => x.id === id);
+  if (!d) return;
+  const totalArrow = getTrendArrow(d.total, d.prev_total);
+  const prevLabel = d.prev_total != null ? ` · Прошлый месяц: ${d.prev_total}%` : '';
+  document.getElementById('aim-modal-title').textContent = d.name;
+  document.getElementById('aim-modal-sub').textContent = `Итоговый индекс AIM: ${d.total}%${prevLabel}`;
+  document.getElementById('aim-modal-body').innerHTML = d.metrics.map(m => {
+    const v = m.value != null ? m.value : 0;
+    const arrow = getTrendArrow(m.value, m.prev_value);
+    return `
+    <div class="aim-metric-row">
+      <div class="aim-metric-name">${esc(m.label)}<span class="aim-metric-cat">${esc(m.category)}</span></div>
+      <div class="aim-metric-bar-track"><div class="aim-bar-fill" style="width:${v}%;background:${aimColor(v)}"></div></div>
+      <div class="aim-metric-val">${m.value != null ? m.value + '%' : '—'}</div>
+      <div class="aim-arrow ${arrow.cls}" title="${arrow.title}">${arrow.sym}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('aim-modal-overlay').classList.add('on');
+}
+
+function closeAimModal() {
+  document.getElementById('aim-modal-overlay').classList.remove('on');
+}
+
+// ─── NAV ─────────────────────────────────────────────────────
+function showView(name, el) {
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.sb-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  if(el) el.classList.add('active');
+}
+
+// ─── UTILS ───────────────────────────────────────────────────
+function fd(s) {
+  if(!s) return '—';
+  const[y,m,d]=s.split('-');
+  return `${parseInt(d)} ${MR[parseInt(m)-1]} ${y}`;
+}
+function p(n,d){ return d?Math.round(n/d*100):0; }
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function initials(s){ return s.split(/[\s.]+/).filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join(''); }
+
+// ─── START ───────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', fetchData);
+</script>
+</body>
+</html>
