@@ -1133,7 +1133,8 @@ function getTrendArrow(curr, prev) {
 function renderAim() {
   if (!AIM) return;
   const list = document.getElementById('aim-list');
-  list.innerHTML = AIM.departments.map(d => {
+  const sorted = [...AIM.departments].sort((a, b) => b.total - a.total);
+  list.innerHTML = sorted.map(d => {
     const arrow = getTrendArrow(d.total, d.prev_total);
     return `
     <div class="aim-row" onclick="openAimModal(${d.id})">
